@@ -1,0 +1,8 @@
+(ocamllex lexer)
+
+(copy_files# parsing/*{.ml,.mll})
+(copy_files# evaluation/*{.ml})
+
+(library
+    (name src)
+)
