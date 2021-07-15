@@ -7,11 +7,10 @@ let lexer_err msg =
     raise @@ Lexer_error msg
 
 type token =
-    (* values *)
+    (* primary *)
     | NULL
     | TRUE
     | FALSE
-    (* variables *)
     | INT of int
     | FLOAT of float
     | IDENT of string
@@ -22,17 +21,16 @@ type token =
     | THEN
     | ELSE
     | PRINT
-    (* logical operations *)
+    | RETURN
+    (* operations *)
     | OR
     | AND
-    (* comparisons *)
     | EQEQ
     | NE
     | LT
     | LE
     | GT
     | GE
-    (* operations *)
     | PLUS
     | MIN
     | MULT
@@ -48,7 +46,6 @@ type token =
     | COMMA
     | DOT
     | EQ
-    (* internal *)
     | EOF
 
 (**
@@ -58,11 +55,10 @@ module Token = struct
 
 let to_str token =
     match token with
-    (* values *)
+    (* primary *)
     | NULL -> "null"
     | TRUE -> "true"
     | FALSE -> "false"
-    (* variables *)
     | INT x -> string_of_int x
     | FLOAT x -> string_of_float x
     | IDENT s -> s
@@ -73,10 +69,10 @@ let to_str token =
     | THEN -> "then"
     | ELSE -> "else"
     | PRINT -> "print"
-    (* logical oparations *)
+    | RETURN -> "return"
+    (* oparation *)
     | OR -> "||"
     | AND -> "&&"
-    (* comparisons *)
     | EQ -> "="
     | EQEQ -> "=="
     | NE -> "!="
@@ -84,7 +80,6 @@ let to_str token =
     | LE -> "<="
     | GT -> ">"
     | GE -> ">="
-    (* operations *)
     | PLUS -> "+"
     | MIN -> "-"
     | MULT -> "*"
@@ -99,7 +94,6 @@ let to_str token =
     | SEMICOLON -> ";"
     | COMMA -> ","
     | DOT -> "."
-    (* internal *)
     | EOF -> "EOF"
 
 let is_bop token =

@@ -23,6 +23,7 @@ and stmt =
  * An expression evaluates to a value.
  *)
 and expr =
+    | ExprReturn of expr
     | ExprBinary of bop * expr * expr
     | ExprUnary of uop * expr
     | ExprCall of expr * expr list
@@ -80,6 +81,8 @@ and stmt_to_str stmt =
 
 and expr_to_str expr =
     match expr with
+    | ExprReturn e ->
+        sprintf "return %s" (expr_to_str e)
     | ExprBinary (op, e1, e2) ->
         sprintf "(%s %s %s)" (expr_to_str e1) (bop_to_str op) (expr_to_str e2)
     | ExprUnary (op, e) ->

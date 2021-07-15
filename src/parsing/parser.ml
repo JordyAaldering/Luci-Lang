@@ -116,7 +116,7 @@ and parse_statement lexbuf =
     | PRINT -> parse_print_stmt lexbuf
     | LBRACE -> parse_block_stmt lexbuf
     (* fallthrough case *)
-    | _ -> StmtExpr (parse_expr_stmt lexbuf)
+    | _ -> StmtExpr (parse_expr lexbuf)
 
 and parse_assign_stmt lexbuf =
     let id = assert_and_get_identifier lexbuf in
@@ -148,17 +148,23 @@ and parse_block_stmt lexbuf =
     let block = parse_block lexbuf in
     StmtBlock block
 
-and parse_expr_stmt lexbuf =
-    let e = parse_expr lexbuf in
-    TokenStack.assert_and_consume lexbuf SEMICOLON;
-    e
-
 (**
  * Expressions
  *)
 
 and parse_expr lexbuf =
-    parse_binary lexbuf
+    let t = TokenStack.peek lexbuf in
+    match t with
+    | RETURN ->
+        TokenStack.assert_and_consume lexbuf RETURN;
+        let e = if not (TokenStack.match_and_consume lexbuf SEMICOLON) then
+                let e = parse_expr lexbuf in
+                TokenStack.assert_and_consume lexbuf SEMICOLON;
+                e
+            else ExprNull
+        in
+        ExprReturn e
+    | _ -> parse_binary lexbuf
 
 and parse_binary lexbuf =
     let rec resolve_stack s prec =

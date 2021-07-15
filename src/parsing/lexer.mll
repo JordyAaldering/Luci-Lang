@@ -20,10 +20,6 @@ rule token = parse
     | white         { token lexbuf }
     | comment       { token lexbuf }
     | newline       { new_line lexbuf; token lexbuf }
-    (* values *)
-    | "null"        { NULL }
-    | "true"        { TRUE }
-    | "false"       { FALSE }
     (* keywords *)
     | "function"    { FUNCTION }
     | "var"         { VAR }
@@ -31,17 +27,16 @@ rule token = parse
     | "then"        { THEN }
     | "else"        { ELSE }
     | "print"       { PRINT }
-    (* logical operations *)
+    | "return"      { RETURN }
+    (* operations *)
     | "||"          { OR }
     | "&&"          { AND }
-    (* comparisons *)
     | "=="          { EQEQ }
     | "!="          { NE }
     | '<'           { LT }
     | "<="          { LE }
     | '>'           { GT }
     | ">="          { GE }
-    (* operations *)
     | '+'           { PLUS }
     | '-'           { MIN }
     | '*'           { MULT }
@@ -57,10 +52,13 @@ rule token = parse
     | ','           { COMMA }
     | '.'           { DOT }
     | '='           { EQ }
-    (* variables (has to be at the end to avoid seeing keywords as identifiers) *)
-    | ident         { IDENT (lexeme lexbuf) }
+    (* primary *)
+    | "null"        { NULL }
+    | "true"        { TRUE }
+    | "false"       { FALSE }
     | int           { INT (int_of_string @@ lexeme lexbuf) }
     | float         { FLOAT (float_of_string @@ lexeme lexbuf) }
-    (* internal *)
+    | ident         { IDENT (lexeme lexbuf) }
     | eof           { EOF }
+
     | _             { lexer_err @@ sprintf "unexpected symbol `%s'" (lexeme lexbuf) }
