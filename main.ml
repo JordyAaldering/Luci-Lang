@@ -1,6 +1,4 @@
 open Src
-open Src.Value
-open Src.Env
 open Printf
 
 let repl () =
@@ -9,22 +7,18 @@ let repl () =
         printf "> ";
         let input = read_line () in
         let lexbuf = Lexing.from_string input in
-        let declarations = Parser.parse lexbuf in
-        let v, env = Eval.eval declarations in
-        printf "\nDeclarations:\n%s\n\n" (String.concat "\n" (List.map Ast.expr_to_str declarations));
-        printf "Enviroment:\n%s\n\n" (Env.to_str env);
-        printf "Res: %s\n" (Value.to_str v)
+        let e = Parser.parse lexbuf in
+        let _env = Eval.eval e in
+        printf "\nAst:\n%s\n\n" (Ast.stmt_to_str e)
     ) done
 
 let compile fname =
     let file = open_in fname in
     let lexbuf = Lexing.from_channel file in
-    let declarations = Parser.parse lexbuf in
-    close_in file;
-    let v, env = Eval.eval declarations in
-    printf "\nDeclarations:\n%s\n\n" (String.concat "\n" (List.map Ast.expr_to_str declarations));
-    printf "Enviroment:\n%s\n\n" (Env.to_str env);
-    printf "Res: %s\n" (Value.to_str v)
+    let e = Parser.parse lexbuf in
+    let _env = Eval.eval e in
+    printf "\nAst:\n%s\n\n" (Ast.stmt_to_str e);
+    close_in file
 
 let () =
     let num_args = Array.length Sys.argv - 1 in

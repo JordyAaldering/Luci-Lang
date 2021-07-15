@@ -4,7 +4,7 @@ open Printf
  * A declaration binds identifiers to statements.
  *)
 type decl =
-    | DeclFun of string * string list * decl list
+    | DeclFun of string * string list * stmt
     | DeclVar of string * expr
     | DeclStmt of stmt
 
@@ -16,8 +16,8 @@ and stmt =
     | StmtAssign of string * expr
     | StmtCond of expr * stmt * stmt
     | StmtPrint of expr
-    | StmtExpr of expr
     | StmtBlock of decl list
+    | StmtExpr of expr
 
 (**
  * An expression evaluates to a value.
@@ -57,7 +57,7 @@ and uop =
 let rec decl_to_str decl =
     match decl with
     | DeclFun (id, args, block) ->
-        sprintf "function %s(%s) {%s}" id (String.concat ", " args) (String.concat " " (List.map decl_to_str block))
+        sprintf "function %s(%s) {%s}" id (String.concat ", " args) (stmt_to_str block)
     | DeclVar (id, e) ->
         sprintf "var %s = %s" id (expr_to_str e)
     | DeclStmt s ->
@@ -73,10 +73,10 @@ and stmt_to_str stmt =
         sprintf "if %s then %s else %s" (expr_to_str e) (stmt_to_str s1) (stmt_to_str s2)
     | StmtPrint e ->
         sprintf "print(%s);" (expr_to_str e)
-    | StmtExpr e ->
-        sprintf "%s;" (expr_to_str e)
     | StmtBlock block ->
         String.concat " " (List.map decl_to_str block)
+    | StmtExpr e ->
+        sprintf "%s;" (expr_to_str e)
 
 and expr_to_str expr =
     match expr with

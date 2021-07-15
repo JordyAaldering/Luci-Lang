@@ -64,7 +64,7 @@ let rec parse_program lexbuf =
     while not (TokenStack.match_and_consume lexbuf EOF) do
         declarations := !declarations @ [parse_declaration lexbuf]
     done;
-    !declarations
+    StmtBlock !declarations
 
 (**
  * Declarations
@@ -90,7 +90,7 @@ and parse_function_decl lexbuf =
         else []
     in
 
-    let block = parse_block lexbuf in
+    let block = parse_block_stmt lexbuf in
     DeclFun (id, args, block)
 
 and parse_var_decl lexbuf =

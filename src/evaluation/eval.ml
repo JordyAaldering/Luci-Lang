@@ -1,5 +1,4 @@
 open Ast
-open Env
 open Value
 open Printf
 
@@ -8,18 +7,18 @@ exception Eval_error of string
 let eval_err msg =
     raise @@ Eval_error msg
 
+module Env = Map.Make(String)
+
 let value_eval_binary op =
     match op with
-    (* comparisons *)
+    | OpOr -> Value.or_lazy
+    | OpAnd -> Value.and_lazy
     | OpEq -> Value.eq
     | OpNe -> Value.ne
     | OpLt -> Value.lt
     | OpLe -> Value.le
     | OpGt -> Value.gt
     | OpGe -> Value.ge
-    | OpAnd -> Value.and_lazy
-    | OpOr -> Value.or_lazy
-    (* operations *)
     | OpPlus -> Value.add
     | OpMin -> Value.subtract
     | OpMult -> Value.multiply
@@ -31,6 +30,65 @@ let value_eval_unary op =
     | OpNeg -> Value.negate
     | OpNot -> Value.not
 
+let rec eval_decl env e =
+    match e with
+    | DeclFun (id, args, e) ->
+        let cls = VClosure (args, e, env) in
+        let env = Env.add id cls env in
+        env
+    | DeclVar (id, e) ->
+        let v = eval_expr env e in
+        let env = Env.add id v env in
+        env
+    | DeclStmt s ->
+        eval_stmt env s
+
+and eval_stmt env e =
+    match e with
+    | StmtAssign (id, e) ->
+        if not (Env.mem id env) then
+            eval_err @@ sprintf "key `%s' is not in env" id;
+        let v = eval_expr env e in
+        let env = Env.add id v env in
+        env
+    | StmtCond (e, st, sf) ->
+        let v = eval_expr env e in
+        let cond = Value.convert_to_bool v in
+        eval_stmt env (if cond then st else sf)
+    | StmtPrint e ->
+        let v = eval_expr env e in
+        printf "%s\n" (Value.to_str v);
+        env
+    | StmtBlock ds ->
+        List.fold_left (fun env' d ->
+                eval_decl env' d
+            ) env ds
+    | StmtExpr e ->
+        let _ = eval_expr env e in
+        env
+
+and eval_expr env e =
+    match e with
+    | ExprBinary (op, e1, e2) ->
+        let v1 = eval_expr env e1 in
+        let v2 = eval_expr env e2 in
+        value_eval_binary op v1 v2
+    | ExprUnary (op, e) ->
+        let v = eval_expr env e in
+        value_eval_unary op v
+    | ExprCall (_e, _es) ->
+        VNull
+    | ExprSelect (_e, _ids) ->
+        VNull
+    (* primary *)
+    | ExprNull -> VNull
+    | ExprTrue -> VTrue
+    | ExprFalse -> VFalse
+    | ExprInt x -> VInt x
+    | ExprFloat x -> VFloat x
+    | ExprIdent id -> Env.find id env
+
+(*
 let rec eval_expr env e =
     match e with
     (* values *)
@@ -96,11 +154,7 @@ let rec eval_expr env e =
         let v = Env.find_value_from_ptr env ptr in
         let res = value_eval_unary op v in
         Env.add_fresh_value env res
+*)
 
-let eval declarations =
-    let last_ptr, env = List.fold_left (fun (_ptr, env) declaration ->
-            eval_expr env declaration
-        ) ("", Env.mk_empty ()) declarations
-    in
-    let last_val = Env.find_value_from_ptr env last_ptr in
-    (last_val, env)
+let eval e =
+    eval_stmt Env.empty e
