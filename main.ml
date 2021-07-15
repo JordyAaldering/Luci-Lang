@@ -11,9 +11,9 @@ let repl () =
         let lexbuf = Lexing.from_string input in
         let declarations = Parser.parse lexbuf in
         let v, env = Eval.eval declarations in
-        printf "Declarations:\n%s\n\n" (String.concat "\n" (List.map Ast.expr_to_str declarations));
+        printf "\nDeclarations:\n%s\n\n" (String.concat "\n" (List.map Ast.expr_to_str declarations));
         printf "Enviroment:\n%s\n\n" (Env.to_str env);
-        printf "%s\n" (Value.to_str v)
+        printf "Res: %s\n" (Value.to_str v)
     ) done
 
 let compile fname =
@@ -22,9 +22,9 @@ let compile fname =
     let declarations = Parser.parse lexbuf in
     close_in file;
     let v, env = Eval.eval declarations in
-    printf "Declarations:\n%s\n\n" (String.concat "\n" (List.map Ast.expr_to_str declarations));
+    printf "\nDeclarations:\n%s\n\n" (String.concat "\n" (List.map Ast.expr_to_str declarations));
     printf "Enviroment:\n%s\n\n" (Env.to_str env);
-    printf "%s\n" (Value.to_str v)
+    printf "Res: %s\n" (Value.to_str v)
 
 let () =
     let num_args = Array.length Sys.argv - 1 in

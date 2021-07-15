@@ -21,6 +21,7 @@ type token =
     | IF
     | THEN
     | ELSE
+    | PRINT
     (* logical operations *)
     | OR
     | AND
@@ -71,6 +72,7 @@ let to_str token =
     | IF -> "if"
     | THEN -> "then"
     | ELSE -> "else"
+    | PRINT -> "print"
     (* logical oparations *)
     | OR -> "||"
     | AND -> "&&"

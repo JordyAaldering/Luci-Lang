@@ -1,6 +1,7 @@
 open Ast
 open Env
 open Value
+open Printf
 
 exception Eval_error of string
 
@@ -41,28 +42,31 @@ let rec eval_expr env e =
     | EInt x -> Env.add_fresh_value env (VInt x)
     | EFloat x -> Env.add_fresh_value env (VFloat x)
     (* expressions *)
+    | EBlock exprs ->
+        List.fold_left (fun (_ptr, env) e -> eval_expr env e) ("", env) exprs
     | ECall (e, arg_exprs) ->
-        let ptr1, env = eval_expr env e in
-        let func = Env.find_value_from_ptr env ptr1 in
+        let fptr, env = eval_expr env e in
+        let func = Env.find_value_from_ptr env fptr in
         let arg_names, e, func_ptr_env = Value.extract_closure func in
 
-        let rec add_args_to_env arg_names arg_exprs env =
+        let rec add_args_to_env arg_names arg_exprs fenv =
             match arg_names, arg_exprs with
             | (name :: t1), (expr :: t2) ->
-                let ptr, env = eval_expr env expr in
-                let env = Env.add_ptr env name ptr in
-                add_args_to_env t1 t2 env
-            | _, _ -> env
+                let ptr, fenv = eval_expr env expr in
+                let fenv = Env.add_ptr fenv name ptr in
+                add_args_to_env t1 t2 fenv
+            | _, _ -> fenv
         in
 
-        let _func_env = (func_ptr_env, Env.snd env) in
-        let func_env = add_args_to_env arg_names arg_exprs env in
-        eval_expr func_env e
+        let fenv = (func_ptr_env, Env.snd env) in
+        let fenv = add_args_to_env arg_names arg_exprs fenv in
+        eval_expr fenv e
     | ESelect (_var, _ids) -> ("", env)
     | EFunc (fname, args, e) ->
-        let func_ptr, env = Env.add_fresh_name env fname in
-        let env = Env.add_val env func_ptr (VClosure (args, e, Env.fst env)) in
-        (func_ptr, env)
+        let fptr, env = Env.add_fresh_ptr env fname in
+        let func = VClosure (args, e, Env.fst env) in
+        let env = Env.add_value env fptr func in
+        (fptr, env)
     | EVar (vname, e) ->
         let res_ptr, env = eval_expr env e in
         let env = Env.add_ptr env vname res_ptr in
@@ -75,6 +79,11 @@ let rec eval_expr env e =
         let ptr1, env = eval_expr env e1 in
         let v1 = Value.convert_to_bool @@ Env.find_value_from_ptr env ptr1 in
         if v1 then eval_expr env e2 else eval_expr env e3
+    | EPrint e ->
+        let ptr, env = eval_expr env e in
+        let v = Env.find_value_from_ptr env ptr in
+        printf "%s\n" (Value.to_str v);
+        (ptr, env)
     | EBinary (op, e1, e2) ->
         let ptr1, env = eval_expr env e1 in
         let ptr2, env = eval_expr env e2 in

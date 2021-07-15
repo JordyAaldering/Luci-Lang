@@ -110,7 +110,8 @@ and parse_statement lexbuf =
     let t = TokenStack.peek lexbuf in
     match t with
     | IF -> parse_cond_stmt lexbuf
-    | LPAREN -> parse_block lexbuf
+    | PRINT -> parse_print_stmt lexbuf
+    | LBRACE -> parse_block lexbuf
     | _ -> parse_expr_stmt lexbuf
 
 and parse_cond_stmt lexbuf =
@@ -125,6 +126,14 @@ and parse_cond_stmt lexbuf =
         else ENull
     in
     ECond (e1, e2, e3)
+
+and parse_print_stmt lexbuf =
+    TokenStack.assert_and_consume lexbuf PRINT;
+    TokenStack.assert_and_consume lexbuf LPAREN;
+    let e = parse_expr lexbuf in
+    TokenStack.assert_and_consume lexbuf RPAREN;
+    TokenStack.assert_and_consume lexbuf SEMICOLON;
+    EPrint e
 
 and parse_expr_stmt lexbuf =
     let e = parse_expr lexbuf in
@@ -240,9 +249,11 @@ and parse_arguments lexbuf =
 
 and parse_block lexbuf =
     TokenStack.assert_and_consume lexbuf LBRACE;
-    let block = parse_declaration lexbuf in
-    TokenStack.assert_and_consume lexbuf RBRACE;
-    block
+    let block = ref [] in
+    while not (TokenStack.match_and_consume lexbuf RBRACE) do
+        block := !block @ [parse_declaration lexbuf]
+    done;
+    EBlock (!block)
 
 let parse lexbuf =
     TokenStack.stack := [];

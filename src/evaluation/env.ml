@@ -10,10 +10,16 @@ exception Env_error of string
 let env_err msg =
     raise @@ Env_error msg
 
+(**
+ * Module for keeping track of and operating on the program environment.
+ * An environment is a tuple of (ptr_env, val_env),
+ * where ptr_env is a mapping from variable names to pointers
+ * and val_env is a mapping from pointers to values.
+ *)
 module Env = struct
 
 let mk_empty () =
-    (StringMap.empty, StringMap.empty)
+    StringMap.empty, StringMap.empty
 
 let fst env =
     match env with
@@ -26,21 +32,21 @@ let snd env =
 let ptr_env_to_str ptr_env =
     if StringMap.is_empty ptr_env then "[]"
     else
-        StringMap.fold (fun var ptr tail ->
-            sprintf "%s -> %s%s" var ptr
-                (if tail = "" then "" else ", " ^ tail)
+        StringMap.fold (fun vname ptr tl ->
+            sprintf "%s -> %s%s" vname ptr
+                (if tl = "" then "" else ", " ^ tl)
         ) ptr_env ""
 
 let val_env_to_str val_env =
     if StringMap.is_empty val_env then "[]"
     else
-        StringMap.fold (fun ptr value tail ->
+        StringMap.fold (fun ptr value tl ->
             sprintf "%s -> %s%s" ptr (Value.to_str value)
-                (if tail = "" then "" else ", " ^ tail)
+                (if tl = "" then "" else ", " ^ tl)
         ) val_env ""
 
 let to_str env =
-    sprintf "ptr_env: [%s]\nval_env: [%s]"
+    sprintf "Pointer env: [%s]\nValue env: [%s]"
         (ptr_env_to_str (fst env)) (val_env_to_str (snd env))
 
 (**
@@ -51,7 +57,7 @@ let ptr_count = ref 0
 
 let create_fresh_ptr () =
     ptr_count := !ptr_count + 1;
-    sprintf "ptr%d" !ptr_count
+    sprintf "p%d" !ptr_count
 
 let update_value_ptr env ptr_old ptr_new =
     let value_updater v = 
@@ -70,46 +76,42 @@ let update_value_ptr env ptr_old ptr_new =
  * Setters
  *)
 
-let add_ptr env var ptr =
-    let ptr_env = StringMap.add var ptr (fst env) in
+let add_ptr env vname ptr =
+    let ptr_env = StringMap.add vname ptr (fst env) in
     (ptr_env, snd env)
 
-let add_val env ptr value =
+let add_value env ptr value =
     let val_env = StringMap.add ptr value (snd env) in
     (fst env, val_env)
 
-let add_fresh_name env var =
+let add_fresh_ptr env vname =
     let ptr = create_fresh_ptr () in
-    let ptr_env = StringMap.add var ptr (fst env) in
-    (ptr, (ptr_env, snd env))
+    (ptr, add_ptr env vname ptr)
 
 let add_fresh_value env value =
     let ptr = create_fresh_ptr () in
-    let val_env = StringMap.add ptr value (snd env) in
-    (ptr, (fst env, val_env))
+    (ptr, add_value env ptr value)
 
-let update_ptr env var new_ptr =
-    if not (StringMap.mem var (fst env)) then
-        env_err @@ sprintf "key `%s' is not in pointer env" var;
-    let ptr_env = StringMap.add var new_ptr (fst env) in
-    (ptr_env, snd env)
+let update_ptr env vname ptr =
+    if not (StringMap.mem vname (fst env)) then
+        env_err @@ sprintf "key `%s' is not in pointer env" vname;
+    add_ptr env vname ptr
 
-let update_val env ptr new_value =
+let update_value env ptr value =
     if not (StringMap.mem ptr (snd env)) then
         env_err @@ sprintf "key `%s' is not in value env" ptr;
-    let val_env = StringMap.add ptr new_value (snd env) in
-    (fst env, val_env)
+    add_value env ptr value
 
 (**
  * Getters
  *)
 
-let find_ptr_from_name env var =
+let find_ptr_from_name env vname =
     try
-        StringMap.find var (fst env)
+        StringMap.find vname (fst env)
     with Not_found ->
         env_err @@ sprintf "could not find variable `%s' in pointer env [%s]"
-            var (ptr_env_to_str (fst env))
+            vname (ptr_env_to_str (fst env))
 
 let find_value_from_ptr env ptr =
     try
@@ -117,9 +119,5 @@ let find_value_from_ptr env ptr =
     with Not_found ->
         env_err @@ sprintf "could not find pointer `%s' in value env [%s]"
             ptr (val_env_to_str (snd env))
-
-let find_value_from_name env var =
-    let ptr = find_ptr_from_name env var in
-    find_value_from_ptr env ptr
 
 end (* Env *)
