@@ -1,35 +1,48 @@
 open Printf
 
-type expr =
-    (* values *)
-    | ENull
-    | ETrue
-    | EFalse
-    (* variables *)
-    | EIdent of string
-    | EInt of int
-    | EFloat of float
-    (* expressions *)
-    | EBlock of expr list
-    | ECall of expr * expr list
-    | ESelect of expr * string list
-    | EFunc of string * string list * expr
-    | EVar of string * expr
-    | EAssign of string * expr
-    | ECond of expr * expr * expr
-    | EPrint of expr
-    | EBinary of bop * expr * expr
-    | EUnary of uop * expr
+(**
+ * A declaration binds identifiers to statements.
+ *)
+type decl =
+    | DeclFun of string * string list * decl
+    | DeclVar of string * expr
+    | DeclStmt of stmt
+
+(**
+ * A statement does something with potential side-effects,
+ * evaluating to an updated environment.
+ *)
+and stmt =
+    | StmtAssign of string * expr
+    | StmtCond of expr * stmt * stmt
+    | StmtPrint of expr
+    | StmtExpr of expr
+
+(**
+ * An expression evaluates to a value.
+ *)
+and expr =
+    | ExprCall of string * expr list
+    | ExprSelect of expr * string list
+    | ExprBinary of bop * expr * expr
+    | ExprUnary of uop * expr
+    (* primary *)
+    | ExprNull
+    | ExprTrue
+    | ExprFalse
+    | ExprInt of int
+    | ExprFloat of float
+    | ExprIdent of string
 
 and bop =
+    | OpOr
+    | OpAnd
     | OpEq
     | OpNe
     | OpLt
     | OpLe
     | OpGt
     | OpGe
-    | OpAnd
-    | OpOr
     | OpPlus
     | OpMin
     | OpMult
@@ -40,52 +53,60 @@ and uop =
     | OpNeg
     | OpNot
 
-let bop_to_str op =
-    match op with
-    | OpEq -> "="
-    | OpNe -> "!="
-    | OpLt -> "<"
-    | OpLe -> "<="
-    | OpGt -> ">"
-    | OpGe -> ">="
-    | OpAnd -> "&&"
-    | OpOr -> "||"
-    | OpPlus -> "+"
-    | OpMin -> "-"
-    | OpMult -> "*"
-    | OpDiv -> "/"
-    | OpMod -> "%"
+let rec decl_to_str decl =
+    | DeclFun (id, args, d) ->
+        sprintf "function %s(%s) {%s}" id (String.concat ", " args) (decl_to_str d)
+    | DeclVar (id, e) ->
+        sprintf "var %s = %s" id (expr_to_str e)
+    | DeclStmt s ->
+        stmt_to_str s
 
-let uop_to_str op =
+and stmt_to_str stmt =
+    | StmtAssign (id, e) ->
+        sprintf "%s = %s" id (expr_to_str e)
+    | StmtCond (e, s1, ExprNull) ->
+        sprintf "if %s then %s" (expr_to_str e) (stmt_to_str s1)
+    | StmtCond (e, s1, s2) ->
+        sprintf "if %s then %s else %s" (expr_to_str e) (stmt_to_str s1) (stmt_to_str s2)
+    | StmtPrint e ->
+        sprintf "print(%s);" (expr_to_str e)
+    | StmtExpr e ->
+        sprintf "%s;" (expr_to_str e)
+
+and expr_to_str expr =
+    | ExprCall (id, args) ->
+        sprintf "%s(%s)" id (String.concat ", " (List.map expr_to_str args))
+    | ExprSelect (e, ids) ->
+        sprintf "%s.%s" (expr_to_str e) (String.concat "." ids)
+    | ExprBinary (op, e1, e2) ->
+        sprintf "(%s %s %s)" (expr_to_str e1) (bop_to_str op) (expr_to_str e2)
+    | ExprUnary (op, e) ->
+        sprintf "%s%s" (uop_to_str op) (expr_to_str e)
+    (* primary *)
+    | ExprNull -> "null"
+    | ExprTrue -> "true"
+    | ExprFalse -> "false"
+    | ExprInt x -> string_of_int 
+    | ExprFloat x -> string_of_float x
+    | ExprIdent id -> id
+
+and bop_to_str op =
+    match op with
+    | OpOr   -> "||"
+    | OpAnd  -> "&&"
+    | OpEq   -> "="
+    | OpNe   -> "!="
+    | OpLt   -> "<"
+    | OpLe   -> "<="
+    | OpGt   -> ">"
+    | OpGe   -> ">="
+    | OpPlus -> "+"
+    | OpMin  -> "-"
+    | OpMult -> "*"
+    | OpDiv  -> "/"
+    | OpMod  -> "%"
+
+and uop_to_str op =
     match op with
     | OpNeg -> "-"
     | OpNot -> "!"
-
-let rec expr_to_str expr =
-    match expr with
-    (* values *)
-    | ENull -> "null"
-    | ETrue -> "true"
-    | EFalse -> "false"
-    (* variables *)
-    | EIdent s -> s
-    | EInt x -> string_of_int x
-    | EFloat x -> string_of_float x
-    (* expressions *)
-    | EBlock exprs ->
-        sprintf "{%s;}" (String.concat "; " (List.map expr_to_str exprs))
-    | ECall (e, args) ->
-        sprintf "%s(%s)" (expr_to_str e) (String.concat ", " (List.map expr_to_str args))
-    | ESelect (e, ids) ->
-        sprintf "%s.%s" (expr_to_str e) (String.concat "." ids)
-    | EFunc (name, args, e) ->
-        sprintf "function %s(%s) %s" name (String.concat ", " args) (expr_to_str e)
-    | EVar (s, e) -> sprintf "var %s = %s" s (expr_to_str e)
-    | EAssign (s, e) -> sprintf "%s = %s" s (expr_to_str e)
-    | ECond (e1, e2, e3) ->
-        sprintf "if %s then %s else %s" (expr_to_str e1) (expr_to_str e2) (expr_to_str e3)
-    | EPrint e -> sprintf "print(%s)" (expr_to_str e)
-    | EBinary (op, e1, e2) ->
-        sprintf "(%s %s %s)" (expr_to_str e1) (bop_to_str op) (expr_to_str e2)
-    | EUnary (op, e) ->
-        sprintf "%s%s" (uop_to_str op) (expr_to_str e)
