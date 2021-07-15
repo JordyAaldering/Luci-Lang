@@ -52,7 +52,7 @@ end (* TokenStack *)
 let assert_and_get_identifier lexbuf =
     let t = TokenStack.get lexbuf in
     match t with
-    | IDENT s -> s
+    | IDENT id -> id
     | _ -> parse_err @@ sprintf "expected an identifier, got `%s'" (Token.to_str t)
 
 (**
@@ -75,11 +75,12 @@ and parse_declaration lexbuf =
     match t with
     | FUNCTION -> parse_function_decl lexbuf
     | VAR -> parse_var_decl lexbuf
-    | _ -> parse_statement lexbuf
+    (* fallthrough case *)
+    | _ -> DeclStmt (parse_statement lexbuf)
 
 and parse_function_decl lexbuf =
     TokenStack.assert_and_consume lexbuf FUNCTION;
-    let name = assert_and_get_identifier lexbuf in
+    let id = assert_and_get_identifier lexbuf in
 
     TokenStack.assert_and_consume lexbuf LPAREN;
     let args = if not (TokenStack.match_and_consume lexbuf RPAREN) then
@@ -88,19 +89,20 @@ and parse_function_decl lexbuf =
             args
         else []
     in
+
     let block = parse_block lexbuf in
-    EFunc (name, args, block)
+    DeclFun (id, args, block)
 
 and parse_var_decl lexbuf =
     TokenStack.assert_and_consume lexbuf VAR;
-    let name = assert_and_get_identifier lexbuf in
+    let id = assert_and_get_identifier lexbuf in
 
     let e = if TokenStack.match_and_consume lexbuf EQ then
             parse_expr lexbuf
-        else ENull
+        else ExprNull
     in
     TokenStack.assert_and_consume lexbuf SEMICOLON;
-    EVar (name, e)
+    DeclVar (id, e)
 
 (**
  * Statements
@@ -109,23 +111,30 @@ and parse_var_decl lexbuf =
 and parse_statement lexbuf =
     let t = TokenStack.peek lexbuf in
     match t with
+    | IDENT _ -> parse_assign_stmt lexbuf
     | IF -> parse_cond_stmt lexbuf
     | PRINT -> parse_print_stmt lexbuf
-    | LBRACE -> parse_block lexbuf
-    | _ -> parse_expr_stmt lexbuf
+    | LBRACE -> parse_block_stmt lexbuf
+    (* fallthrough case *)
+    | _ -> StmtExpr (parse_expr_stmt lexbuf)
+
+and parse_assign_stmt lexbuf =
+    let id = assert_and_get_identifier lexbuf in
+    TokenStack.assert_and_consume lexbuf EQ;
+    let e = parse_expr lexbuf in
+    StmtAssign (id, e)
 
 and parse_cond_stmt lexbuf =
     TokenStack.assert_and_consume lexbuf IF;
     let e1 = parse_expr lexbuf in
-
     TokenStack.assert_and_consume lexbuf THEN;
     let e2 = parse_statement lexbuf in
     
     let e3 = if TokenStack.match_and_consume lexbuf ELSE then
             parse_statement lexbuf
-        else ENull
+        else StmtExpr ExprNull
     in
-    ECond (e1, e2, e3)
+    StmtCond (e1, e2, e3)
 
 and parse_print_stmt lexbuf =
     TokenStack.assert_and_consume lexbuf PRINT;
@@ -133,7 +142,11 @@ and parse_print_stmt lexbuf =
     let e = parse_expr lexbuf in
     TokenStack.assert_and_consume lexbuf RPAREN;
     TokenStack.assert_and_consume lexbuf SEMICOLON;
-    EPrint e
+    StmtPrint e
+
+and parse_block_stmt lexbuf =
+    let block = parse_block lexbuf in
+    StmtBlock block
 
 and parse_expr_stmt lexbuf =
     let e = parse_expr lexbuf in
@@ -145,33 +158,14 @@ and parse_expr_stmt lexbuf =
  *)
 
 and parse_expr lexbuf =
-    parse_assignment lexbuf
-
-and parse_assignment lexbuf =
-    let t1 = TokenStack.peek lexbuf in
-    let t2 = TokenStack.peek_snd lexbuf in
-    match t1, t2 with
-    | VAR, _ ->
-        TokenStack.assert_and_consume lexbuf VAR;
-        let s = assert_and_get_identifier lexbuf in
-        let e = if TokenStack.match_and_consume lexbuf EQ then
-                parse_assignment lexbuf
-            else ENull
-        in
-        EVar (s, e)
-    | IDENT _s, EQ ->
-        let s = assert_and_get_identifier lexbuf in
-        TokenStack.assert_and_consume lexbuf EQ;
-        let e = parse_assignment lexbuf in
-        EAssign (s, e)
-    | _ -> parse_binary lexbuf
+    parse_binary lexbuf
 
 and parse_binary lexbuf =
     let rec resolve_stack s prec =
         let e1, op1, prec1 = Stack.pop s in
         if prec <= prec1 then (
             let e2, op2, prec2 = Stack.pop s in
-            let e = EBinary (Token.to_bop op1, e2, e1) in
+            let e = ExprBinary (Token.to_bop op1, e2, e1) in
             Stack.push (e, op2, prec2) s;
             resolve_stack s prec
         ) else Stack.push (e1, op1, prec1) s
@@ -194,7 +188,7 @@ and parse_unary lexbuf =
     if List.exists (TokenStack.match_no_consume lexbuf) [NOT; MIN] then
         let op = Token.to_uop (TokenStack.get lexbuf) in
         let e = parse_unary lexbuf in
-        EUnary (op, e)
+        ExprUnary (op, e)
     else parse_call lexbuf
 
 and parse_call lexbuf =
@@ -205,24 +199,24 @@ and parse_call lexbuf =
         TokenStack.assert_and_consume lexbuf LPAREN;
         let args = parse_arguments lexbuf in
         TokenStack.assert_and_consume lexbuf RPAREN;
-        ECall (e, args)
+        ExprCall (e, args)
     end
     | DOT -> begin
         TokenStack.assert_and_consume lexbuf DOT;
         let ids = parse_identifiers ~delim:DOT lexbuf in
-        ESelect (e, ids)
+        ExprSelect (e, ids)
     end
     | _ -> e
 
 and parse_primary lexbuf =
     let t = TokenStack.get lexbuf in
     match t with
-    | NULL -> ENull
-    | TRUE -> ETrue
-    | FALSE -> EFalse
-    | INT x -> EInt x
-    | FLOAT x -> EFloat x
-    | IDENT s -> EIdent s
+    | NULL  -> ExprNull
+    | TRUE  -> ExprTrue
+    | FALSE -> ExprFalse
+    | INT x -> ExprInt x
+    | FLOAT x -> ExprFloat x
+    | IDENT id -> ExprIdent id
     | LPAREN ->
         let e = parse_expr lexbuf in
         TokenStack.assert_and_consume lexbuf RPAREN;
@@ -253,7 +247,7 @@ and parse_block lexbuf =
     while not (TokenStack.match_and_consume lexbuf RBRACE) do
         block := !block @ [parse_declaration lexbuf]
     done;
-    EBlock (!block)
+    !block
 
 let parse lexbuf =
     TokenStack.stack := [];

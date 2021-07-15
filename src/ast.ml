@@ -4,7 +4,7 @@ open Printf
  * A declaration binds identifiers to statements.
  *)
 type decl =
-    | DeclFun of string * string list * decl
+    | DeclFun of string * string list * decl list
     | DeclVar of string * expr
     | DeclStmt of stmt
 
@@ -17,15 +17,16 @@ and stmt =
     | StmtCond of expr * stmt * stmt
     | StmtPrint of expr
     | StmtExpr of expr
+    | StmtBlock of decl list
 
 (**
  * An expression evaluates to a value.
  *)
 and expr =
-    | ExprCall of string * expr list
-    | ExprSelect of expr * string list
     | ExprBinary of bop * expr * expr
     | ExprUnary of uop * expr
+    | ExprCall of expr * expr list
+    | ExprSelect of expr * string list
     (* primary *)
     | ExprNull
     | ExprTrue
@@ -54,17 +55,19 @@ and uop =
     | OpNot
 
 let rec decl_to_str decl =
-    | DeclFun (id, args, d) ->
-        sprintf "function %s(%s) {%s}" id (String.concat ", " args) (decl_to_str d)
+    match decl with
+    | DeclFun (id, args, block) ->
+        sprintf "function %s(%s) {%s}" id (String.concat ", " args) (String.concat " " (List.map decl_to_str block))
     | DeclVar (id, e) ->
         sprintf "var %s = %s" id (expr_to_str e)
     | DeclStmt s ->
         stmt_to_str s
 
 and stmt_to_str stmt =
+    match stmt with
     | StmtAssign (id, e) ->
         sprintf "%s = %s" id (expr_to_str e)
-    | StmtCond (e, s1, ExprNull) ->
+    | StmtCond (e, s1, StmtExpr ExprNull) ->
         sprintf "if %s then %s" (expr_to_str e) (stmt_to_str s1)
     | StmtCond (e, s1, s2) ->
         sprintf "if %s then %s else %s" (expr_to_str e) (stmt_to_str s1) (stmt_to_str s2)
@@ -72,21 +75,24 @@ and stmt_to_str stmt =
         sprintf "print(%s);" (expr_to_str e)
     | StmtExpr e ->
         sprintf "%s;" (expr_to_str e)
+    | StmtBlock block ->
+        String.concat " " (List.map decl_to_str block)
 
 and expr_to_str expr =
-    | ExprCall (id, args) ->
-        sprintf "%s(%s)" id (String.concat ", " (List.map expr_to_str args))
-    | ExprSelect (e, ids) ->
-        sprintf "%s.%s" (expr_to_str e) (String.concat "." ids)
+    match expr with
     | ExprBinary (op, e1, e2) ->
         sprintf "(%s %s %s)" (expr_to_str e1) (bop_to_str op) (expr_to_str e2)
     | ExprUnary (op, e) ->
         sprintf "%s%s" (uop_to_str op) (expr_to_str e)
+    | ExprCall (e, args) ->
+        sprintf "%s(%s)" (expr_to_str e) (String.concat ", " (List.map expr_to_str args))
+    | ExprSelect (e, ids) ->
+        sprintf "%s.%s" (expr_to_str e) (String.concat "." ids)
     (* primary *)
     | ExprNull -> "null"
     | ExprTrue -> "true"
     | ExprFalse -> "false"
-    | ExprInt x -> string_of_int 
+    | ExprInt x -> string_of_int x
     | ExprFloat x -> string_of_float x
     | ExprIdent id -> id
 
