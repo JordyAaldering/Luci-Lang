@@ -109,6 +109,8 @@ and eval_expr env e =
     | ExprUnary (op, e) ->
         let v, env = eval_expr env e in
         value_eval_unary op v, env
+    | ExprCall (ExprIdent id, _es) ->
+        Env.find env id, env
     | ExprCall (e, es) ->
         let cls, env = eval_expr env e in
         let args, f_body, f_env = Value.extract_closure cls in
@@ -119,8 +121,20 @@ and eval_expr env e =
         in
         (try let env = eval_stmt f_env f_body in VNull, env
             with Return r -> r, env)
-    | ExprSelect (_e, _ids) ->
-        eval_err "not yet implemented"
+    | ExprSelect (e, ExprIdent s) ->
+        let instance, env = eval_expr env e in
+        let class_env = Value.extract_class instance in
+        Env.find class_env s, env
+    | ExprSelect (e, ExprCall (ExprIdent s, _)) ->
+        let instance, env = eval_expr env e in
+        let class_env = Value.extract_class instance in
+        let func = Env.find class_env s in
+        let _args, f_body, f_env = Value.extract_closure func in
+        (try let env = eval_stmt f_env f_body in VNull, env
+            with Return r -> r, env)
+    | ExprSelect _ ->
+        eval_err @@ sprintf "can only call a variable or function, got `%s`"
+            (Ast.expr_to_str 0 true e)
     (* primary *)
     | ExprNull -> VNull, env
     | ExprTrue -> VTrue, env

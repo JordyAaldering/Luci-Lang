@@ -17,6 +17,7 @@ type value =
     | VClosure of string list * stmt * value SMap.t
     (** A class contains the class name and a list of its declarations. *)
     | VClass of value SMap.t
+    | VClassInstance of value SMap.t
 
 module Value = struct
 
@@ -39,6 +40,9 @@ let rec to_str v =
     | VClass env ->
         sprintf "class{%s}"
             (Env.to_str env to_str)
+    | VClassInstance env ->
+        sprintf "instance{%s}"
+            (Env.to_str env to_str)
 
 (**
 * Helper methods
@@ -59,6 +63,7 @@ let is_truthy v =
     | VFloat x -> x <> 0.
     | VClosure _ -> value_err "closure has no truth value"
     | VClass _ -> value_err "class has no truth value"
+    | VClassInstance _ -> value_err "class instance has no truth value"
 
 (**
 * Binary helper methods
@@ -72,7 +77,7 @@ let convert_to_bool v =
     | VInt x -> x <> 0
     | VFloat x -> x <> 0.
     | VClosure _ -> value_err "Cannot convert closure to bool"
-    | VClass _ -> value_err "class"
+    | _ -> value_err "class"
 
 let convert_to_int v =
     match v with
@@ -82,7 +87,7 @@ let convert_to_int v =
     | VInt x -> x
     | VFloat _ -> value_err "Cannot implicitly convert float to int"
     | VClosure _ -> value_err "Cannot convert closure to int"
-    | VClass _ -> value_err "class"
+    | _ -> value_err "class"
 
 let convert_to_float v =
     match v with
@@ -92,7 +97,7 @@ let convert_to_float v =
     | VInt x -> float_of_int x
     | VFloat x -> x
     | VClosure _ -> value_err "Cannot convert closure to float"
-    | VClass _ -> value_err "class"
+    | _ -> value_err "class"
 
 let binary_int_op op v1 v2 =
     let f1 = convert_to_int v1 in
@@ -154,7 +159,7 @@ let negate v =
     | VInt x -> VInt (-x)
     | VFloat x -> VFloat (-.x)
     | VClosure _ -> value_err "Cannot take negation of a closure"
-    | VClass _ -> value_err "class"
+    | _ -> value_err "class"
 
 let absolute v =
     match v with
@@ -164,7 +169,7 @@ let absolute v =
     | VInt x -> VInt (abs x)
     | VFloat x -> VFloat (abs_float x)
     | VClosure _ -> value_err "Cannot take absolute value of a closure"
-    | VClass _ -> value_err "class"
+    | _ -> value_err "class"
 
 (**
 * Helpers
@@ -173,6 +178,11 @@ let absolute v =
 let extract_closure v =
     match v with
     | VClosure (args, e, env) -> (args, e, env)
+    | _ -> value_err @@ sprintf "Invalid argument `%s'" (to_str v)
+
+let extract_class v =
+    match v with
+    | VClass env -> env
     | _ -> value_err @@ sprintf "Invalid argument `%s'" (to_str v)
 
 end (* Value *)

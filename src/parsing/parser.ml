@@ -254,14 +254,18 @@ and parse_call lexbuf =
     match t with
     | LPAREN -> begin
         TokenStack.assert_and_consume lexbuf LPAREN;
-        let args = parse_arguments lexbuf in
-        TokenStack.assert_and_consume lexbuf RPAREN;
+        let args = if not (TokenStack.match_and_consume lexbuf RPAREN) then
+                let args = parse_arguments lexbuf in
+                TokenStack.assert_and_consume lexbuf RPAREN;
+                args
+            else []
+        in
         ExprCall (e, args)
     end
     | DOT -> begin
         TokenStack.assert_and_consume lexbuf DOT;
-        let ids = parse_identifiers ~delim:DOT lexbuf in
-        ExprSelect (e, ids)
+        let sel = parse_call lexbuf in
+        ExprSelect (e, sel)
     end
     | _ -> e
 
@@ -275,9 +279,11 @@ and parse_primary lexbuf =
     | FLOAT x -> ExprFloat x
     | IDENT id -> ExprIdent id
     | LPAREN ->
-        let e = parse_expr lexbuf in
-        TokenStack.assert_and_consume lexbuf RPAREN;
-        e
+        if not (TokenStack.match_and_consume lexbuf RPAREN) then
+            let e = parse_expr lexbuf in
+            TokenStack.assert_and_consume lexbuf RPAREN;
+            e
+        else ExprNull
     | _ -> parse_err @@ sprintf "expected a primary, got `%s'" (Token.to_str t)
 
 (**

@@ -6,3 +6,6 @@ class Box {
         return width * height;
     }
 }
+
+var box = Box();
+print(box.Area());

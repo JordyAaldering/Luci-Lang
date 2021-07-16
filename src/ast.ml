@@ -26,7 +26,7 @@ and expr =
     | ExprBinary of bop * expr * expr
     | ExprUnary of uop * expr
     | ExprCall of expr * expr list
-    | ExprSelect of expr * string list
+    | ExprSelect of expr * expr
     (* primary *)
     | ExprNull
     | ExprTrue
@@ -136,9 +136,9 @@ and expr_to_str ?(use_paren=false) depth flatten expr =
     | ExprCall (e, args) ->
         sprintf "%s(%s)"
             (expr_to_str depth flatten e) (String.concat ", " (List.map (expr_to_str depth flatten) args))
-    | ExprSelect (e, ids) ->
+    | ExprSelect (e, sel) ->
         sprintf "%s.%s"
-            (expr_to_str depth flatten e) (String.concat "." ids)
+            (expr_to_str depth flatten e) (expr_to_str depth flatten sel)
     (* primary *)
     | ExprNull -> "null"
     | ExprTrue -> "true"
