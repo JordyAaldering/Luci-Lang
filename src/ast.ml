@@ -55,7 +55,7 @@ module Ast = struct
 
 let rec whitespace depth =
     if depth <= 0 then ""
-    else "    " ^ (whitespace (depth - 1))
+    else "    " ^ whitespace (depth - 1)
 
 let rec decl_to_str depth flatten decl =
     match decl with

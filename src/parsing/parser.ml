@@ -3,11 +3,6 @@ open Token
 open Lexer
 open Printf
 
-exception Parse_error of string
-
-let parse_err msg =
-    raise @@ Parse_error msg
-
 module TokenStack = struct
     let stack = ref []
 
@@ -24,13 +19,6 @@ module TokenStack = struct
         unget t;
         t
     
-    let peek_snd lexbuf =
-        let t1 = get lexbuf in
-        let t2 = get lexbuf in
-        unget t2;
-        unget t1;
-        t2
-
     let match_no_consume lexbuf expected =
         let t = peek lexbuf in
         if t = expected then true
@@ -47,13 +35,13 @@ module TokenStack = struct
             parse_err @@ sprintf "expected token `%s', got `%s'"
                 (Token.to_str expected) (Token.to_str t);
         ()
-end (* TokenStack *)
 
-let assert_and_get_identifier lexbuf =
-    let t = TokenStack.get lexbuf in
-    match t with
-    | IDENT id -> id
-    | _ -> parse_err @@ sprintf "expected an identifier, got `%s'" (Token.to_str t)
+    let assert_and_get_ident lexbuf =
+        let t = get lexbuf in
+        match t with
+        | IDENT id -> id
+        | _ -> parse_err @@ sprintf "expected an identifier, got `%s'" (Token.to_str t)
+end (* TokenStack *)
 
 (**
  * Program
@@ -80,7 +68,7 @@ and parse_declaration lexbuf =
 
 and parse_function_decl lexbuf =
     TokenStack.assert_and_consume lexbuf FUNCTION;
-    let id = assert_and_get_identifier lexbuf in
+    let id = TokenStack.assert_and_get_ident lexbuf in
 
     TokenStack.assert_and_consume lexbuf LPAREN;
     let args = if not (TokenStack.match_and_consume lexbuf RPAREN) then
@@ -95,7 +83,7 @@ and parse_function_decl lexbuf =
 
 and parse_var_decl lexbuf =
     TokenStack.assert_and_consume lexbuf VAR;
-    let id = assert_and_get_identifier lexbuf in
+    let id = TokenStack.assert_and_get_ident lexbuf in
 
     let e = if TokenStack.match_and_consume lexbuf EQ then
             parse_expr lexbuf
@@ -236,16 +224,16 @@ and parse_primary lexbuf =
         let e = parse_expr lexbuf in
         TokenStack.assert_and_consume lexbuf RPAREN;
         e
-    | _ -> lexer_err @@ sprintf "expected a primary, got `%s'" (Token.to_str t)
+    | _ -> parse_err @@ sprintf "expected a primary, got `%s'" (Token.to_str t)
 
 (**
  * Helpers
  *)
 
 and parse_identifiers ?(delim=COMMA) lexbuf =
-    let ids = ref [assert_and_get_identifier lexbuf] in
+    let ids = ref [TokenStack.assert_and_get_ident lexbuf] in
     while TokenStack.match_and_consume lexbuf delim do
-        ids := !ids @ [assert_and_get_identifier lexbuf]
+        ids := !ids @ [TokenStack.assert_and_get_ident lexbuf]
     done;
     !ids
 

@@ -13,8 +13,6 @@ type value =
     | VFalse
     | VInt of int
     | VFloat of float
-    (* A closure takes a list of arguments, the expression they are applied to,
-       and an environment mapping variables to their pointers. *)
     | VClosure of string list * stmt * value SMap.t
 
 module Value = struct
@@ -26,8 +24,9 @@ let rec to_str v =
     | VFalse -> "false"
     | VInt x -> string_of_int x
     | VFloat x -> string_of_float x
-    | VClosure (args, s, env) ->
-        sprintf "{\\(%s).%s, %s}" (String.concat "," args) (Ast.stmt_to_str 0 true s) (Env.to_str env to_str)
+    | VClosure (args, body, env) ->
+        sprintf "{\\(%s).%s, %s}" (String.concat "," args)
+            (Ast.stmt_to_str 0 true body) (Env.to_str env to_str)
 
 (**
 * Helper methods

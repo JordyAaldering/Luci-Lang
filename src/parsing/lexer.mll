@@ -60,5 +60,4 @@ rule token = parse
     | float         { FLOAT (float_of_string @@ lexeme lexbuf) }
     | ident         { IDENT (lexeme lexbuf) }
     | eof           { EOF }
-
-    | _             { lexer_err @@ sprintf "unexpected symbol `%s'" (lexeme lexbuf) }
+    | _             { parse_err @@ sprintf "unexpected symbol `%s'" (lexeme lexbuf) }

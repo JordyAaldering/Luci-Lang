@@ -1,10 +1,10 @@
 open Ast
 open Printf
 
-exception Lexer_error of string
+exception Parse_error of string
 
-let lexer_err msg =
-    raise @@ Lexer_error msg
+let parse_err msg =
+    raise @@ Parse_error msg
 
 type token =
     (* primary *)
@@ -135,13 +135,13 @@ let to_bop token =
     | MULT -> OpMult
     | DIV -> OpDiv
     | MOD -> OpMod
-    | _ -> lexer_err @@ sprintf "expected a binary operator, got `%s'" (to_str token)
+    | _ -> parse_err @@ sprintf "expected a binary operator, got `%s'" (to_str token)
 
 let to_uop token =
     match token with
     | MIN -> OpNeg
     | NOT -> OpNot
-    | _ -> lexer_err @@ sprintf "expected a unary operator, got `%s'" (to_str token)
+    | _ -> parse_err @@ sprintf "expected a unary operator, got `%s'" (to_str token)
 
 let precedence token =
     match token with
@@ -158,6 +158,6 @@ let precedence token =
     | MULT
     | DIV
     | MOD -> 6
-    | _ -> lexer_err @@ sprintf "expected a binary operator, got `%s'" (to_str token)
+    | _ -> parse_err @@ sprintf "expected a binary operator, got `%s'" (to_str token)
 
 end (* Token *)

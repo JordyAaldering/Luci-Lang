@@ -35,15 +35,12 @@ let rec eval_decl env e =
     match e with
     | DeclFun (id, args, e) ->
         let cls = VClosure (args, e, env) in
-        let env = Env.add env id cls in
-        env
+        Env.add env id cls
     | DeclVar (id, e) ->
         let v = eval_expr env e in
-        let env = Env.add env id v in
-        env
+        Env.add env id v
     | DeclStmt s ->
-        let env, _v = eval_stmt env s in
-        env
+        eval_stmt env s
 
 and eval_stmt env e =
     match e with
@@ -57,22 +54,19 @@ and eval_stmt env e =
     | StmtPrint e ->
         let v = eval_expr env e in
         printf "%s\n" (Value.to_str v);
-        env, VNull
+        env
     | StmtBlock ds ->
-        let env = List.fold_left (fun env' d ->
-                eval_decl env' d
-            ) env ds
-        in
-        env, VNull
+        List.fold_left (fun env' d ->
+            eval_decl env' d
+        ) env ds
     | StmtExpr e ->
-        let v = eval_expr env e in
-        env, v
+        let _v = eval_expr env e in
+        env
 
 and eval_expr env e =
     match e with
     | ExprAssign (_e1, e2) ->
-        let v2 = eval_expr env e2 in
-        v2
+        eval_expr env e2
     | ExprBinary (op, e1, e2) ->
         let v1 = eval_expr env e1 in
         let v2 = eval_expr env e2 in
@@ -82,20 +76,16 @@ and eval_expr env e =
         value_eval_unary op v
     | ExprCall (e, es) ->
         let cls = eval_expr env e in
-        let args, bodyf, envf = Value.extract_closure cls in
-        let envf = List.fold_left2 (fun env' arg e ->
+        let args, f_body, f_env = Value.extract_closure cls in
+        let f_env = List.fold_left2 (fun env' arg e ->
                 let v = eval_expr env e in
                 Env.add env' arg v
-            ) envf args es
+            ) f_env args es
         in
-        let v = try
-                let _env, v = eval_stmt envf bodyf in
-                v
-            with Return r -> r
-        in
-        v
+        (try let _env = eval_stmt f_env f_body in VNull
+            with Return r -> r)
     | ExprSelect (_e, _ids) ->
-        VNull
+        eval_err "not yet implemented"
     (* primary *)
     | ExprNull -> VNull
     | ExprTrue -> VTrue
