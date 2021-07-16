@@ -27,7 +27,7 @@ let rec to_str v =
     | VInt x -> string_of_int x
     | VFloat x -> string_of_float x
     | VClosure (args, s, env) ->
-        sprintf "{\\(%s).%s, %s}" (String.concat "," args) (stmt_to_str s) (Env.to_str env to_str)
+        sprintf "{\\(%s).%s, %s}" (String.concat "," args) (Ast.stmt_to_str 0 true s) (Env.to_str env to_str)
 
 (**
 * Helper methods

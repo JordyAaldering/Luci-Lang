@@ -64,7 +64,7 @@ let rec parse_program lexbuf =
     while not (TokenStack.match_and_consume lexbuf EOF) do
         declarations := !declarations @ [parse_declaration lexbuf]
     done;
-    StmtBlock !declarations
+    !declarations
 
 (**
  * Declarations
@@ -258,4 +258,6 @@ and parse_arguments lexbuf =
 
 let parse lexbuf =
     TokenStack.stack := [];
-    parse_program lexbuf
+    let prog = parse_program lexbuf in
+    printf "Parsed %d global declarations\n" (List.length prog);
+    prog

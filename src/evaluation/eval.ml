@@ -104,6 +104,7 @@ and eval_expr env e =
     | ExprFloat x -> VFloat x
     | ExprIdent id -> Env.find env id
 
-let eval e =
-    let env, _ = eval_stmt SMap.empty e in
-    env
+let eval ?(env=SMap.empty) prog =
+    List.fold_left (fun env' decl ->
+        eval_decl env' decl
+    ) env prog

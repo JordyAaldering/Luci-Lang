@@ -20,8 +20,8 @@ type token =
     | IF
     | THEN
     | ELSE
-    | PRINT
     | RETURN
+    | PRINT
     (* operations *)
     | OR
     | AND
@@ -68,8 +68,8 @@ let to_str token =
     | IF -> "if"
     | THEN -> "then"
     | ELSE -> "else"
-    | PRINT -> "print"
     | RETURN -> "return"
+    | PRINT -> "print"
     (* oparation *)
     | OR -> "||"
     | AND -> "&&"

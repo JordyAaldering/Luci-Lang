@@ -26,8 +26,8 @@ rule token = parse
     | "if"          { IF }
     | "then"        { THEN }
     | "else"        { ELSE }
-    | "print"       { PRINT }
     | "return"      { RETURN }
+    | "print"       { PRINT }
     (* operations *)
     | "||"          { OR }
     | "&&"          { AND }
