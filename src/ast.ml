@@ -5,6 +5,7 @@ type program = decl list
 
 (** A declaration binds identifiers to statements. *)
 and decl =
+    | DeclClass of string * decl list
     | DeclFun of string * string list * stmt
     | DeclVar of string * expr
     | DeclStmt of stmt
@@ -61,12 +62,19 @@ let rec whitespace depth =
 
 let rec decl_to_str depth flatten decl =
     match decl with
+    | DeclClass (id, decls) ->
+        if flatten then
+            sprintf "class %s {%s}" id (String.concat " " (List.map (decl_to_str 0 false) block))
+        else
+            sprintf "class %s {\n%s\n%s}" id
+                (String.concat "\n" (List.map (fun d -> sprintf "%s%s" (whitespace depth) (decl_to_str depth flatten d)) block))
+                (whitespace (depth - 1))
     | DeclFun (id, args, block) ->
         if flatten then
             sprintf "function %s(%s) %s"
                 id (String.concat ", " args) (stmt_to_str 0 false block)
         else
-            sprintf "\nfunction %s(%s) %s\n"
+            sprintf "function %s(%s) %s\n"
                 id (String.concat ", " args) (stmt_to_str (depth + 1) flatten block)
     | DeclVar (id, e) ->
         sprintf "var %s = %s;"
