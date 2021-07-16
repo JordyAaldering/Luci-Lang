@@ -11,15 +11,21 @@ type token =
     | NULL
     | TRUE
     | FALSE
+    | THIS
+    | SUPER
     | INT of int
     | FLOAT of float
     | IDENT of string
     (* keywords *)
+    | CLASS
     | FUNCTION
     | VAR
     | IF
     | THEN
     | ELSE
+    | WHILE
+    | FOR
+    | DO
     | RETURN
     | PRINT
     (* operations *)
@@ -56,45 +62,51 @@ module Token = struct
 let to_str token =
     match token with
     (* primary *)
-    | NULL -> "null"
-    | TRUE -> "true"
-    | FALSE -> "false"
-    | INT x -> string_of_int x
-    | FLOAT x -> string_of_float x
-    | IDENT s -> s
+    | NULL      -> "null"
+    | TRUE      -> "true"
+    | FALSE     -> "false"
+    | THIS      -> "this"
+    | SUPER     -> "super"
+    | INT x     -> string_of_int x
+    | FLOAT x   -> string_of_float x
+    | IDENT s   -> s
     (* keywords *)
-    | FUNCTION -> "function"
-    | VAR -> "var"
-    | IF -> "if"
-    | THEN -> "then"
-    | ELSE -> "else"
-    | RETURN -> "return"
-    | PRINT -> "print"
+    | CLASS     -> "class"
+    | FUNCTION  -> "function"
+    | VAR       -> "var"
+    | IF        -> "if"
+    | THEN      -> "then"
+    | ELSE      -> "else"
+    | WHILE     -> "while"
+    | FOR       -> "for"
+    | DO        -> "do"
+    | RETURN    -> "return"
+    | PRINT     -> "print"
     (* oparation *)
-    | OR -> "||"
-    | AND -> "&&"
-    | EQ -> "="
-    | EQEQ -> "=="
-    | NE -> "!="
-    | LT -> "<"
-    | LE -> "<="
-    | GT -> ">"
-    | GE -> ">="
-    | PLUS -> "+"
-    | MIN -> "-"
-    | MULT -> "*"
-    | DIV -> "/"
-    | MOD -> "%"
-    | NOT -> "!"
+    | OR        -> "||"
+    | AND       -> "&&"
+    | EQ        -> "="
+    | EQEQ      -> "=="
+    | NE        -> "!="
+    | LT        -> "<"
+    | LE        -> "<="
+    | GT        -> ">"
+    | GE        -> ">="
+    | PLUS      -> "+"
+    | MIN       -> "-"
+    | MULT      -> "*"
+    | DIV       -> "/"
+    | MOD       -> "%"
+    | NOT       -> "!"
     (* symbols *)
-    | LPAREN -> "("
-    | RPAREN -> ")"
-    | LBRACE -> "{"
-    | RBRACE -> "}"
+    | LPAREN    -> "("
+    | RPAREN    -> ")"
+    | LBRACE    -> "{"
+    | RBRACE    -> "}"
     | SEMICOLON -> ";"
-    | COMMA -> ","
-    | DOT -> "."
-    | EOF -> "EOF"
+    | COMMA     -> ","
+    | DOT       -> "."
+    | EOF       -> "EOF"
 
 let is_bop token =
     match token with

@@ -21,11 +21,15 @@ rule token = parse
     | comment       { token lexbuf }
     | newline       { new_line lexbuf; token lexbuf }
     (* keywords *)
+    | "class"       { CLASS }
     | "function"    { FUNCTION }
     | "var"         { VAR }
     | "if"          { IF }
     | "then"        { THEN }
     | "else"        { ELSE }
+    | "while"       { WHILE }
+    | "for"         { FOR }
+    | "do"          { DO }
     | "return"      { RETURN }
     | "print"       { PRINT }
     (* operations *)
@@ -56,6 +60,8 @@ rule token = parse
     | "null"        { NULL }
     | "true"        { TRUE }
     | "false"       { FALSE }
+    | "this"        { THIS }
+    | "super"       { SUPER }
     | int           { INT (int_of_string @@ lexeme lexbuf) }
     | float         { FLOAT (float_of_string @@ lexeme lexbuf) }
     | ident         { IDENT (lexeme lexbuf) }
