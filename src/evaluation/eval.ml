@@ -1,4 +1,5 @@
 open Ast
+open Env
 open Value
 open Printf
 
@@ -8,18 +9,6 @@ exception Return of value
 
 let eval_err msg =
     raise @@ Eval_error msg
-
-module Env = Map.Make(String)
-
-let env_to_str env =
-    if Env.is_empty env then "[]"
-    else
-        sprintf "[%s]" (
-            Env.fold (fun id v tl ->
-                sprintf "%s -> %s%s" id (Value.to_str v)
-                    (if tl = "" then "" else ", " ^ tl)
-            ) env ""
-        )
 
 let value_eval_binary op =
     match op with
@@ -46,11 +35,11 @@ let rec eval_decl env e =
     match e with
     | DeclFun (id, args, e) ->
         let cls = VClosure (args, e, env) in
-        let env = Env.add id cls env in
+        let env = Env.add env id cls in
         env
     | DeclVar (id, e) ->
         let v = eval_expr env e in
-        let env = Env.add id v env in
+        let env = Env.add env id v in
         env
     | DeclStmt s ->
         let env, _v = eval_stmt env s in
@@ -96,7 +85,7 @@ and eval_expr env e =
         let args, bodyf, envf = Value.extract_closure cls in
         let envf = List.fold_left2 (fun env' arg e ->
                 let v = eval_expr env e in
-                Env.add arg v env'
+                Env.add env' arg v
             ) envf args es
         in
         let v = try
@@ -113,7 +102,8 @@ and eval_expr env e =
     | ExprFalse -> VFalse
     | ExprInt x -> VInt x
     | ExprFloat x -> VFloat x
-    | ExprIdent id -> Env.find id env
+    | ExprIdent id -> Env.find env id
 
 let eval e =
-    eval_stmt Env.empty e
+    let env, _ = eval_stmt SMap.empty e in
+    env

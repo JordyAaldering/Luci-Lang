@@ -1,13 +1,13 @@
 open Src
+open Src.Env
 open Src.Value
 open Printf
 
 let compile lexbuf =
-    let e = Parser.parse lexbuf in
-    printf "Ast: %s\n" (Ast.stmt_to_str e);
-    let env, v = Eval.eval e in
-    printf "Env: %s\n" (Eval.env_to_str env);
-    printf "Res: %s\n" (Value.to_str v)
+    let ast = Parser.parse lexbuf in
+    let env = Eval.eval ast in
+    printf "Ast: %s\n" (Ast.stmt_to_str ast);
+    printf "Env: %s\n" (Env.to_str env Value.to_str)
 
 let from_repl () =
     printf "Starting REPL...\n";

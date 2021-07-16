@@ -60,7 +60,7 @@ let rec decl_to_str decl =
     | DeclFun (id, args, block) ->
         sprintf "function %s(%s) %s" id (String.concat ", " args) (stmt_to_str block)
     | DeclVar (id, e) ->
-        sprintf "var %s = %s" id (expr_to_str e)
+        sprintf "var %s = %s;" id (expr_to_str e)
     | DeclStmt s ->
         stmt_to_str s
 

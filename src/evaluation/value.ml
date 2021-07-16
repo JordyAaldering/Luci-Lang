@@ -1,12 +1,11 @@
 open Ast
+open Env
 open Printf
 
 exception ValueError of string
 
 let value_err msg =
     raise @@ ValueError msg
-
-module Env = Map.Make(String)
 
 type value =
     | VNull
@@ -16,7 +15,7 @@ type value =
     | VFloat of float
     (* A closure takes a list of arguments, the expression they are applied to,
        and an environment mapping variables to their pointers. *)
-    | VClosure of string list * stmt * value Env.t
+    | VClosure of string list * stmt * value SMap.t
 
 module Value = struct
 
@@ -28,15 +27,7 @@ let rec to_str v =
     | VInt x -> string_of_int x
     | VFloat x -> string_of_float x
     | VClosure (args, s, env) ->
-        let env_to_str ptr_env =
-            if Env.is_empty ptr_env then "[]"
-            else
-                Env.fold (fun k v tail ->
-                    sprintf "%s -> %s%s" k (to_str v)
-                        (if tail == "" then "" else ", " ^ tail)
-                ) ptr_env ""
-        in
-        sprintf "{\\(%s).%s, %s}" (String.concat "," args) (stmt_to_str s) (env_to_str env)
+        sprintf "{\\(%s).%s, %s}" (String.concat "," args) (stmt_to_str s) (Env.to_str env to_str)
 
 (**
 * Helper methods
