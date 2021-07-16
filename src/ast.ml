@@ -12,6 +12,8 @@ and decl =
 (** A statement does something with potential side-effects. *)
 and stmt =
     | StmtCond of expr * stmt * stmt
+    | StmtWhile of expr * stmt
+    | StmtFor of decl * expr * expr * stmt
     | StmtReturn of expr
     | StmtPrint of expr
     | StmtBlock of decl list
@@ -80,6 +82,21 @@ and stmt_to_str depth flatten stmt =
     | StmtCond (e, s1, s2) ->
         sprintf "if %s then %s else %s"
             (expr_to_str depth flatten e) (stmt_to_str depth flatten s1) (stmt_to_str depth flatten s2)
+    | StmtWhile (e, StmtExpr ExprNull) ->
+        sprintf "while %s do;" (expr_to_str depth flatten e)
+    | StmtWhile (e, s) ->
+        sprintf "while %s do %s" (expr_to_str depth flatten e) (stmt_to_str depth flatten s)
+    | StmtFor (d, e1, e2, StmtExpr ExprNull) ->
+        sprintf "for %s; %s; %s do;"
+            (if d = DeclStmt (StmtExpr ExprNull) then "" else decl_to_str depth flatten d)
+            (if e1 = ExprNull then "" else expr_to_str depth flatten e1)
+            (if e2 = ExprNull then "" else expr_to_str depth flatten e2)
+    | StmtFor (d, e1, e2, s) ->
+        sprintf "for %s; %s; %s do %s"
+            (if d = DeclStmt (StmtExpr ExprNull) then "" else decl_to_str depth flatten d)
+            (if e1 = ExprNull then "" else expr_to_str depth flatten e1)
+            (if e2 = ExprNull then "" else expr_to_str depth flatten e2)
+            (stmt_to_str depth flatten s)
     | StmtReturn e ->
         sprintf "return %s;"
             (expr_to_str depth flatten e)
