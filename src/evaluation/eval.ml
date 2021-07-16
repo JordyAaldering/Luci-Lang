@@ -37,22 +37,46 @@ let rec eval_decl env e =
         let cls = VClosure (args, e, env) in
         Env.add env id cls
     | DeclVar (id, e) ->
-        let v = eval_expr env e in
+        let v, env = eval_expr env e in
         Env.add env id v
     | DeclStmt s ->
         eval_stmt env s
 
 and eval_stmt env e =
     match e with
-    | StmtCond (e, st, sf) ->
-        let v = eval_expr env e in
+    | StmtCond (cond, st, sf) ->
+        let v, env = eval_expr env cond in
         let cond = Value.convert_to_bool v in
         eval_stmt env (if cond then st else sf)
+    | StmtWhile (cond, s) ->
+        let v, env = eval_expr env cond in
+        let v_ref = ref v in
+        let env_ref = ref env in
+        while Value.is_truthy @@ !v_ref do
+            env_ref := eval_stmt !env_ref s;
+            let v, env = eval_expr !env_ref cond in
+            v_ref := v;
+            env_ref := env
+        done;
+        !env_ref
+    | StmtFor (init, cond, step, s) ->
+        let env = eval_decl env init in
+        let v, env = eval_expr env cond in
+        let v_ref = ref v in
+        let env_ref = ref env in
+        while Value.is_truthy @@ !v_ref do
+            env_ref := eval_stmt !env_ref s;
+            env_ref := eval_stmt !env_ref step;
+            let v, env = eval_expr !env_ref cond in
+            v_ref := v;
+            env_ref := env
+        done;
+        !env_ref
     | StmtReturn e ->
-        let v = eval_expr env e in
+        let v, _env = eval_expr env e in
         raise @@ Return v
     | StmtPrint e ->
-        let v = eval_expr env e in
+        let v, env = eval_expr env e in
         printf "%s\n" (Value.to_str v);
         env
     | StmtBlock ds ->
@@ -60,39 +84,43 @@ and eval_stmt env e =
             eval_decl env' d
         ) env ds
     | StmtExpr e ->
-        let _v = eval_expr env e in
+        let _v, env = eval_expr env e in
         env
 
 and eval_expr env e =
     match e with
+    | ExprAssign (ExprIdent id, e) ->
+        let v, env = eval_expr env e in
+        let env = Env.add env id v in
+        v, env
     | ExprAssign (_e1, e2) ->
         eval_expr env e2
     | ExprBinary (op, e1, e2) ->
-        let v1 = eval_expr env e1 in
-        let v2 = eval_expr env e2 in
-        value_eval_binary op v1 v2
+        let v1, env = eval_expr env e1 in
+        let v2, env = eval_expr env e2 in
+        value_eval_binary op v1 v2, env
     | ExprUnary (op, e) ->
-        let v = eval_expr env e in
-        value_eval_unary op v
+        let v, env = eval_expr env e in
+        value_eval_unary op v, env
     | ExprCall (e, es) ->
-        let cls = eval_expr env e in
+        let cls, env = eval_expr env e in
         let args, f_body, f_env = Value.extract_closure cls in
         let f_env = List.fold_left2 (fun env' arg e ->
-                let v = eval_expr env e in
+                let v, _env = eval_expr env e in
                 Env.add env' arg v
             ) f_env args es
         in
-        (try let _env = eval_stmt f_env f_body in VNull
-            with Return r -> r)
+        (try let env = eval_stmt f_env f_body in VNull, env
+            with Return r -> r, env)
     | ExprSelect (_e, _ids) ->
         eval_err "not yet implemented"
     (* primary *)
-    | ExprNull -> VNull
-    | ExprTrue -> VTrue
-    | ExprFalse -> VFalse
-    | ExprInt x -> VInt x
-    | ExprFloat x -> VFloat x
-    | ExprIdent id -> Env.find env id
+    | ExprNull -> VNull, env
+    | ExprTrue -> VTrue, env
+    | ExprFalse -> VFalse, env
+    | ExprInt x -> VInt x, env
+    | ExprFloat x -> VFloat x, env
+    | ExprIdent id -> Env.find env id, env
 
 let eval ?(env=SMap.empty) prog =
     List.fold_left (fun env' decl ->

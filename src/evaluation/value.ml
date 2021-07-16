@@ -38,6 +38,15 @@ let is_numerical v =
     | VFloat _ -> true
     | _ -> false
 
+let is_truthy v =
+    match v with
+    | VNull -> false
+    | VTrue -> true
+    | VFalse -> false
+    | VInt x -> x <> 0
+    | VFloat x -> x <> 0.
+    | VClosure _ -> value_err "closure has no truth value"
+
 (**
 * Binary helper methods
 *)

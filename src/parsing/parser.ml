@@ -125,9 +125,7 @@ and parse_while_stmt lexbuf =
     let cond = parse_expr lexbuf in
     TokenStack.assert_and_consume lexbuf DO;
     let st = if not (TokenStack.match_and_consume lexbuf SEMICOLON) then
-            let st = parse_statement lexbuf in
-            TokenStack.assert_and_consume lexbuf SEMICOLON;
-            st
+            parse_statement lexbuf
         else StmtExpr ExprNull
     in
     StmtWhile (cond, st)
@@ -135,9 +133,7 @@ and parse_while_stmt lexbuf =
 and parse_for_stmt lexbuf = 
     TokenStack.assert_and_consume lexbuf FOR;
     let init = if not (TokenStack.match_and_consume lexbuf SEMICOLON) then
-            let init = parse_declaration lexbuf in
-            TokenStack.assert_and_consume lexbuf SEMICOLON;
-            init
+            parse_declaration lexbuf
         else DeclStmt (StmtExpr ExprNull)
     in
     let cond = if not (TokenStack.match_and_consume lexbuf SEMICOLON) then
@@ -146,17 +142,14 @@ and parse_for_stmt lexbuf =
             cond
         else ExprNull
     in
-    let step = if not (TokenStack.match_and_consume lexbuf SEMICOLON) then
-            let step = parse_expr lexbuf in
-            TokenStack.assert_and_consume lexbuf SEMICOLON;
+    let step = if not (TokenStack.match_and_consume lexbuf DO) then
+            let step = parse_statement lexbuf in
+            TokenStack.assert_and_consume lexbuf DO;
             step
-        else ExprNull
+        else StmtExpr ExprNull
     in
-    TokenStack.assert_and_consume lexbuf DO;
     let s = if not (TokenStack.match_and_consume lexbuf SEMICOLON) then
-            let s = parse_statement lexbuf in
-            TokenStack.assert_and_consume lexbuf SEMICOLON;
-            s
+            parse_statement lexbuf
         else StmtExpr ExprNull
     in
     StmtFor (init, cond, step, s)
