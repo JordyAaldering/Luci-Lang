@@ -100,6 +100,8 @@ and parse_statement lexbuf =
     let t = TokenStack.peek lexbuf in
     match t with
     | IF -> parse_cond_stmt lexbuf
+    | WHILE -> parse_while_stmt lexbuf
+    | FOR -> parse_for_stmt lexbuf
     | RETURN -> parse_return_stmt lexbuf
     | PRINT -> parse_print_stmt lexbuf
     | LBRACE -> parse_block_stmt lexbuf
@@ -108,15 +110,56 @@ and parse_statement lexbuf =
 
 and parse_cond_stmt lexbuf =
     TokenStack.assert_and_consume lexbuf IF;
-    let e1 = parse_expr lexbuf in
+    let cond = parse_expr lexbuf in
     TokenStack.assert_and_consume lexbuf THEN;
-    let e2 = parse_statement lexbuf in
+    let st = parse_statement lexbuf in
     
-    let e3 = if TokenStack.match_and_consume lexbuf ELSE then
+    let sf = if TokenStack.match_and_consume lexbuf ELSE then
             parse_statement lexbuf
         else StmtExpr ExprNull
     in
-    StmtCond (e1, e2, e3)
+    StmtCond (cond, st, sf)
+
+and parse_while_stmt lexbuf =
+    TokenStack.assert_and_consume lexbuf WHILE;
+    let cond = parse_expr lexbuf in
+    TokenStack.assert_and_consume lexbuf DO;
+    let st = if not (TokenStack.match_and_consume lexbuf SEMICOLON) then
+            let st = parse_statement lexbuf in
+            TokenStack.assert_and_consume lexbuf SEMICOLON;
+            st
+        else StmtExpr ExprNull
+    in
+    StmtWhile (cond, st)
+
+and parse_for_stmt lexbuf = 
+    TokenStack.assert_and_consume lexbuf FOR;
+    let init = if not (TokenStack.match_and_consume lexbuf SEMICOLON) then
+            let init = parse_declaration lexbuf in
+            TokenStack.assert_and_consume lexbuf SEMICOLON;
+            init
+        else DeclStmt (StmtExpr ExprNull)
+    in
+    let cond = if not (TokenStack.match_and_consume lexbuf SEMICOLON) then
+            let cond = parse_expr lexbuf in
+            TokenStack.assert_and_consume lexbuf SEMICOLON;
+            cond
+        else ExprNull
+    in
+    let step = if not (TokenStack.match_and_consume lexbuf SEMICOLON) then
+            let step = parse_expr lexbuf in
+            TokenStack.assert_and_consume lexbuf SEMICOLON;
+            step
+        else ExprNull
+    in
+    TokenStack.assert_and_consume lexbuf DO;
+    let s = if not (TokenStack.match_and_consume lexbuf SEMICOLON) then
+            let s = parse_statement lexbuf in
+            TokenStack.assert_and_consume lexbuf SEMICOLON;
+            s
+        else StmtExpr ExprNull
+    in
+    StmtFor (init, cond, step, s)
 
 and parse_return_stmt lexbuf =
     TokenStack.assert_and_consume lexbuf RETURN;
