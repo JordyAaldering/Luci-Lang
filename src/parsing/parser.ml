@@ -61,10 +61,28 @@ let rec parse_program lexbuf =
 and parse_declaration lexbuf =
     let t = TokenStack.peek lexbuf in
     match t with
+    | CLASS -> parse_class_decl lexbuf
     | FUNCTION -> parse_function_decl lexbuf
     | VAR -> parse_var_decl lexbuf
     (* fallthrough case *)
     | _ -> DeclStmt (parse_statement lexbuf)
+
+and parse_class_decl lexbuf =
+    TokenStack.assert_and_consume lexbuf CLASS;
+    let id = TokenStack.assert_and_get_ident lexbuf in
+    
+    TokenStack.assert_and_consume lexbuf LBRACE;
+    let block = ref [] in
+    while not (TokenStack.match_and_consume lexbuf RBRACE) do
+        let t = TokenStack.peek lexbuf in
+        let decl = match t with
+            | FUNCTION -> parse_function_decl lexbuf
+            | VAR -> parse_var_decl lexbuf
+            | _ -> parse_err @@ sprintf "classes can only contain functions and variables, got `%s'" (Token.to_str t)
+        in
+        block := !block @ [decl]
+    done;
+    DeclClass (id, !block)
 
 and parse_function_decl lexbuf =
     TokenStack.assert_and_consume lexbuf FUNCTION;

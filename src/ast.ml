@@ -62,7 +62,7 @@ let rec whitespace depth =
 
 let rec decl_to_str depth flatten decl =
     match decl with
-    | DeclClass (id, decls) ->
+    | DeclClass (id, block) ->
         if flatten then
             sprintf "class %s {%s}" id (String.concat " " (List.map (decl_to_str 0 false) block))
         else

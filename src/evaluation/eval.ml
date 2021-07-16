@@ -33,6 +33,13 @@ let value_eval_unary op =
 
 let rec eval_decl env e =
     match e with
+    | DeclClass (id, block) ->
+        let class_env = List.fold_left (fun env' decl ->
+                eval_decl env' decl
+            ) env block
+        in
+        let v = VClass class_env in
+        Env.add env id v
     | DeclFun (id, args, e) ->
         let cls = VClosure (args, e, env) in
         Env.add env id cls

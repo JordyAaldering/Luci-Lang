@@ -1,0 +1,8 @@
+class Box {
+    var width = 10;
+    var height = 5;
+
+    function Area() {
+        return width * height;
+    }
+}
