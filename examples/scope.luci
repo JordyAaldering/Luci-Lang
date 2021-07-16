@@ -1,0 +1,12 @@
+var a = 5;
+var b = 2;
+var x = -1;
+
+function add(x, y) {
+    return a * (x + y);
+}
+
+a = -1;
+
+var res = add(b, 3);
+print(res == 25);

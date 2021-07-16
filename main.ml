@@ -4,9 +4,10 @@ open Printf
 
 let compile lexbuf =
     let e = Parser.parse lexbuf in
-    let _env, v = Eval.eval e in
     printf "Ast: %s\n" (Ast.stmt_to_str e);
-    printf "Res: %s" (Value.to_str v)
+    let env, v = Eval.eval e in
+    printf "Env: %s\n" (Eval.env_to_str env);
+    printf "Res: %s\n" (Value.to_str v)
 
 let from_repl () =
     printf "Starting REPL...\n";

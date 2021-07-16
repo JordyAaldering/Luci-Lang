@@ -4,6 +4,8 @@ open Printf
 
 exception Eval_error of string
 
+exception Return of value
+
 let eval_err msg =
     raise @@ Eval_error msg
 
@@ -41,16 +43,9 @@ let value_eval_unary op =
     | OpNot -> Value.not
 
 let rec eval_decl env e =
-    printf "decl: %s\n\t%s\n" (decl_to_str e) (env_to_str env);
     match e with
     | DeclFun (id, args, e) ->
         let cls = VClosure (args, e, env) in
-
-        let args, e, envc = Value.extract_closure cls in
-        let envc = Env.add id cls envc in
-        let cls = VClosure (args, e, envc) in
-        printf "--- %s\n" (env_to_str envc);
-        
         let env = Env.add id cls env in
         env
     | DeclVar (id, e) ->
@@ -62,18 +57,14 @@ let rec eval_decl env e =
         env
 
 and eval_stmt env e =
-    printf "stmt: %s\n\t%s\n" (stmt_to_str e) (env_to_str env);
     match e with
-    | StmtAssign (id, e) ->
-        if not (Env.mem id env) then
-            eval_err @@ sprintf "unknown identifier '%s' in `%s'" id (env_to_str env);
-        let v = eval_expr env e in
-        let env = Env.add id v env in
-        env, v
     | StmtCond (e, st, sf) ->
         let v = eval_expr env e in
         let cond = Value.convert_to_bool v in
         eval_stmt env (if cond then st else sf)
+    | StmtReturn e ->
+        let v = eval_expr env e in
+        raise @@ Return v
     | StmtPrint e ->
         let v = eval_expr env e in
         printf "%s\n" (Value.to_str v);
@@ -89,11 +80,10 @@ and eval_stmt env e =
         env, v
 
 and eval_expr env e =
-    printf "expr: %s\n\t%s\n" (expr_to_str e) (env_to_str env);
     match e with
-    | ExprReturn e ->
-        let v = eval_expr env e in
-        v
+    | ExprAssign (_e1, e2) ->
+        let v2 = eval_expr env e2 in
+        v2
     | ExprBinary (op, e1, e2) ->
         let v1 = eval_expr env e1 in
         let v2 = eval_expr env e2 in
@@ -101,21 +91,20 @@ and eval_expr env e =
     | ExprUnary (op, e) ->
         let v = eval_expr env e in
         value_eval_unary op v
-    | ExprCall (ExprIdent id, es) ->
-        let cls = try Env.find id env
-            with Not_found ->
-                eval_err @@ sprintf "unknown identifier '%s' in `%s'" id (env_to_str env);
-        in
-        let args, sf, envf = Value.extract_closure cls in
+    | ExprCall (e, es) ->
+        let cls = eval_expr env e in
+        let args, bodyf, envf = Value.extract_closure cls in
         let envf = List.fold_left2 (fun env' arg e ->
                 let v = eval_expr env e in
                 Env.add arg v env'
             ) envf args es
         in
-        let _env, v = eval_stmt envf sf in
+        let v = try
+                let _env, v = eval_stmt envf bodyf in
+                v
+            with Return r -> r
+        in
         v
-    | ExprCall (_e, _es) ->
-        VNull
     | ExprSelect (_e, _ids) ->
         VNull
     (* primary *)
